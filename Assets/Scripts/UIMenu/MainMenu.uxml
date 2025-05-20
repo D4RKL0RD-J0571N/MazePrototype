@@ -1,0 +1,62 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:engine="UnityEngine.UIElements"
+             xsi:noNamespaceSchemaLocation="../../UIElementsSchema/UIElements.xsd">
+
+    <engine:VisualElement name="root" class="root">
+        <engine:Label name="main-title" class="title" />
+        
+        <engine:VisualElement name="main-menu" class="panel main-menu-panel">
+            <engine:Button name="start-button" class="button" />
+            <engine:Button name="options-button" class="button" />
+            <engine:Button name="exit-button" class="button" />
+        </engine:VisualElement>
+
+        <engine:VisualElement name="options-panel" class="panel options-panel">
+            <engine:IntegerField name="width-field" class="input-field" />
+            <engine:IntegerField name="height-field" class="input-field" />
+            <engine:IntegerField name="seed-field" class="input-field" />
+            <engine:Toggle name="auto-place-toggle" class="toggle-field" />
+            
+            <engine:VisualElement name="rgb-settings-group" class="settings-group">
+                <engine:Toggle name="rgb-toggle" class="toggle-field" />
+                <engine:Slider name="cycle-speed-slider" class="slider-field" />
+                <engine:Slider name="saturation-slider" class="slider-field" />
+                <engine:Slider name="brightness-slider" class="slider-field" />
+            </engine:VisualElement>
+
+            <engine:VisualElement name="color-settings-group" class="settings-group">
+                <engine:Label text="Tile Colors" class="group-title" />
+
+                <engine:VisualElement name="floor-color-control" class="color-control-group">
+                    <engine:Label text="Floor Color" class="color-label" />
+                    <engine:VisualElement name="floor-color-display" class="color-display" style="background-color: white;" />
+                    <engine:Slider name="floor-r-slider" label="R" low-value="0" high-value="1" class="color-slider" />
+                    <engine:Slider name="floor-g-slider" label="G" low-value="0" high-value="1" class="color-slider" />
+                    <engine:Slider name="floor-b-slider" label="B" low-value="0" high-value="1" class="color-slider" />
+                </engine:VisualElement>
+
+                <engine:VisualElement name="wall-color-control" class="color-control-group">
+                    <engine:Label text="Wall Color" class="color-label" />
+                    <engine:VisualElement name="wall-color-display" class="color-display" style="background-color: black;" />
+                    <engine:Slider name="wall-r-slider" label="R" low-value="0" high-value="1" class="color-slider" />
+                    <engine:Slider name="wall-g-slider" label="G" low-value="0" high-value="1" class="color-slider" />
+                    <engine:Slider name="wall-b-slider" label="B" low-value="0" high-value="1" class="color-slider" />
+                </engine:VisualElement>
+            </engine:VisualElement>
+            
+            <engine:DropdownField name="difficulty-dropdown" class="dropdown-field"/>
+            <engine:DropdownField name="control-mode-dropdown" class="dropdown-field"/>
+            
+            <engine:Button name="apply-button" class="button apply-button" />
+            <engine:Button name="back-button" class="button back-button" />
+        </engine:VisualElement>
+
+        <engine:VisualElement name="exit-menu-panel" class="panel exit-menu-panel">
+            <engine:Label text="Congratulations!" class="title" />
+            <engine:Label text="You reached the exit!" class="message" />
+            <engine:Button name="exit-new-maze-button" class="button" />
+            <engine:Button name="exit-main-menu-button" class="button" />
+            <engine:Toggle name="auto-generate-toggle" class="toggle-field" />
+        </engine:VisualElement>
+    </engine:VisualElement>
+</engine:UXML>

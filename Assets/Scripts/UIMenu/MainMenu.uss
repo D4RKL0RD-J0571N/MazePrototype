@@ -1,0 +1,231 @@
+:root {
+    /* Colors */
+    --primary-bg-color: #1a1f2b; /* Dark background for panels */
+    --secondary-bg-color: #101820; /* Even darker background for root */
+    --text-color-light: #ffffff;
+    --text-color-dark: #cccccc;
+    --button-color: #3f5c73;
+    --button-hover-color: #52708a;
+    --button-active-color: #324a5f;
+    --accent-color: #9b59b6; /* A vibrant purple for accents */
+    --accent-color-hover: #b87fdc; /* Lighter shade of purple */
+    --accent-color-active: #7c4792; /* Darker shade of purple */
+    --border-color: #2b3a4a; /* Subtle border color */
+
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+
+    /* Font Sizes */
+    --font-size-sm: 14px;
+    --font-size-md: 18px;
+    --font-size-lg: 24px;
+    --font-size-xl: 48px;
+
+    /* Border Radius */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 16px;
+
+    /* Transitions */
+    --transition-speed: 0.2s;
+}
+
+.root {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+    padding: var(--spacing-xl);
+    background-color: var(--secondary-bg-color);
+    transition: opacity var(--transition-speed) ease-in-out;
+}
+
+.title {
+    font-size: var(--font-size-xl);
+    color: var(--text-color-light);
+    -unity-font-style: bold;
+    margin-bottom: var(--spacing-xl);
+    -unity-text-align: middle-center;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5); /* Subtle shadow for title */
+}
+
+.panel {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start; /* Align content to the top within panels */
+    width: 100%;
+    max-width: 500px; /* Slightly increased max-width for better look */
+    background-color: var(--primary-bg-color);
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius-lg);
+    border-width: 1px;
+    border-color: var(--border-color);
+    /* Removed: box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.4); */
+}
+
+.main-menu-panel {
+    margin-top: 0; /* No top margin for main menu */
+}
+
+.options-panel {
+    margin-top: var(--spacing-md); /* Add some space if needed below title */
+}
+
+.button {
+    width: 100%;
+    height: 56px; /* Slightly taller buttons for easier interaction */
+    font-size: var(--font-size-md);
+    background-color: var(--button-color);
+    color: var(--text-color-light);
+    border-radius: var(--border-radius-md);
+    border-width: 0;
+    margin-bottom: var(--spacing-md); /* Consistent spacing between buttons */
+    transition: background-color var(--transition-speed) ease,
+    transform var(--transition-speed) ease;
+    -unity-text-align: middle-center;
+    letter-spacing: 0.5px;
+}
+
+.button:hover {
+    background-color: var(--button-hover-color);
+    transform: scale(1.02); /* Subtle hover effect */
+}
+
+.button:active {
+    background-color: var(--button-active-color);
+    transform: scale(0.98); /* Click feedback */
+}
+
+.back-button {
+    background-color: var(--accent-color); /* Use accent color for back button */
+    margin-top: var(--spacing-lg); /* More space above back button */
+}
+
+.back-button:hover {
+    background-color: var(--accent-color-hover); /* Use the specifically defined hover color */
+}
+
+.back-button:active {
+    background-color: var(--accent-color-active); /* Use the specifically defined active color */
+}
+
+.apply-button {
+    margin-top: var(--spacing-lg); /* Space above apply button */
+    background-color: #27ae60; /* Green color for apply */
+}
+
+.apply-button:hover {
+    background-color: #2ecc71;
+}
+
+.apply-button:active {
+    background-color: #219d55;
+}
+
+
+/* --- Input Field Styling --- */
+
+.input-field,
+.toggle-field,
+.dropdown-field,
+.slider-field {
+    width: 100%;
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-color-light); /* Default text color for labels */
+}
+
+/* Base style for labels in fields */
+.unity-base-field__label {
+    color: var(--text-color-dark);
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-xs);
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+}
+
+/* IntegerField specific styling */
+.unity-base-field__input {
+    background-color: #2b3a4a;
+    border-radius: var(--border-radius-sm);
+    border-width: 1px;
+    border-color: var(--border-color);
+    color: var(--text-color-light);
+    height: 36px;
+    padding: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-size-md);
+}
+
+/* Toggle specific styling */
+.unity-toggle__input {
+    background-color: #2b3a4a;
+    border-radius: var(--border-radius-sm);
+    border-width: 1px;
+    border-color: var(--border-color);
+    width: 24px; /* Size of the toggle box */
+    height: 24px;
+}
+
+.unity-toggle__input:checked {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+/* Slider specific styling */
+.unity-slider__dragger {
+    background-color: var(--accent-color);
+    border-radius: var(--border-radius-sm);
+}
+
+.unity-slider__background {
+    background-color: #2b3a4a;
+    border-radius: var(--border-radius-sm);
+    height: 8px; /* Thinner slider track */
+}
+
+/* DropdownField specific styling */
+.unity-dropdown-field__input {
+    background-color: #2b3a4a;
+    border-radius: var(--border-radius-sm);
+    border-width: 1px;
+    border-color: var(--border-color);
+    color: var(--text-color-light);
+    height: 36px;
+    padding: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+    font-size: var(--font-size-md);
+}
+
+.unity-dropdown-field__arrow {
+    background-color: transparent; /* Remove default arrow background */
+    -unity-background-image-tint-color: var(--text-color-light); /* Tint the arrow icon */
+}
+
+/* Grouping for related settings (like RGB) */
+.settings-group {
+    flex-direction: column;
+    width: 100%;
+    padding: var(--spacing-md);
+    margin-top: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    border-width: 1px;
+    border-color: #3b4a5a;
+    border-radius: var(--border-radius-md);
+    background-color: rgba(0, 0, 0, 0.2); /* Slightly transparent background for the group */
+}
+
+/* Fade out effect */
+.fade-out {
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+}
+
+.hidden {
+    display: none;
+}

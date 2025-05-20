@@ -1,0 +1,230 @@
+using System.IO;
+using System.Text;
+using UnityEditor;
+using UnityEngine;
+
+namespace Editor
+{
+    public class ProjectStructureLogger : EditorWindow
+    {
+        private Vector2 scrollPos;
+
+        [MenuItem("Tools/Git/Log Project Structure for .gitignore")]
+        public static void ShowWindow()
+        {
+            GetWindow<ProjectStructureLogger>("Project Structure Logger");
+        }
+
+        private void OnGUI()
+        {
+            GUILayout.Label("Project Folder Structure for .gitignore", EditorStyles.boldLabel);
+            GUILayout.Space(10);
+
+            if (GUILayout.Button("Log Project Structure to Console"))
+            {
+                LogProjectStructure();
+            }
+
+            GUILayout.Space(20);
+            GUILayout.Label("Recommended .gitignore content for Unity:", EditorStyles.boldLabel);
+
+            scrollPos = EditorGUILayout.BeginScrollView(scrollPos, GUILayout.ExpandWidth(true));
+            EditorGUILayout.SelectableLabel(GetRecommendedGitignoreContent(), EditorStyles.wordWrappedLabel);
+            EditorGUILayout.EndScrollView();
+        }
+
+        private void LogProjectStructure()
+        {
+            Debug.Log("--- Project Folder Structure ---");
+            string projectRoot = Path.GetDirectoryName(Application.dataPath);
+            if (projectRoot == null)
+            {
+                Debug.LogError("Could not determine project root path.");
+                return;
+            }
+
+            StringBuilder logBuilder = new StringBuilder();
+            logBuilder.AppendLine($"Project Root: {projectRoot}");
+            logBuilder.AppendLine("-----------------------------");
+
+            // List top-level directories and files
+            string[] entries = Directory.GetFileSystemEntries(projectRoot);
+            foreach (string entry in entries)
+            {
+                string entryName = Path.GetFileName(entry);
+                if (entryName == "." || entryName == "..") continue; // Skip current and parent directory references
+
+                if (File.Exists(entry))
+                {
+                    logBuilder.AppendLine($"- {entryName} (File)");
+                    if (IsCommonlyIgnoredFile(entryName))
+                    {
+                        logBuilder.AppendLine($"  (Typically Ignored in .gitignore)");
+                    }
+                }
+                else if (Directory.Exists(entry))
+                {
+                    logBuilder.AppendLine($"- {entryName}/ (Directory)");
+                    if (IsCommonlyIgnoredDirectory(entryName))
+                    {
+                        logBuilder.AppendLine($"  (Typically Ignored in .gitignore)");
+                    }
+                }
+            }
+            Debug.Log(logBuilder.ToString());
+            Debug.Log("--- End Project Folder Structure ---");
+        }
+
+        private bool IsCommonlyIgnoredDirectory(string dirName)
+        {
+            switch (dirName)
+            {
+                case "Library":
+                case "Temp":
+                case "Obj":
+                case "Build":
+                case "UserSettings":
+                case ".vs": // Visual Studio
+                case ".vscode": // VS Code
+                case ".idea": // Rider / IntelliJ
+                case "ExportedObj": // Old Unity export format
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private bool IsCommonlyIgnoredFile(string fileName)
+        {
+            // Simple check for commonly ignored file extensions/names
+            return fileName.EndsWith(".csproj") ||
+                   fileName.EndsWith(".unityproj") ||
+                   fileName.EndsWith(".sln") ||
+                   fileName.EndsWith(".user") ||
+                   fileName.EndsWith(".userprefs") ||
+                   fileName.EndsWith(".pidb") ||
+                   fileName.EndsWith(".booproj") ||
+                   fileName.EndsWith(".svd") ||
+                   fileName.EndsWith(".pdb") ||
+                   fileName.EndsWith(".opendb") ||
+                   fileName.EndsWith(".VC.db") ||
+                   fileName.EndsWith(".DS_Store") || // macOS
+                   fileName.EndsWith(".pbxuser") || // macOS specific
+                   fileName.EndsWith(".mode1v3") || // macOS specific
+                   fileName.EndsWith(".xcuserstate"); // macOS specific
+        }
+
+        private string GetRecommendedGitignoreContent()
+        {
+            return @"# This .gitignore file is for Unity projects.
+# It is based on the recommended .gitignore from GitHub:
+# https://github.com/github/gitignore/blob/main/Unity.gitignore
+
+# ==============================================================================
+# Unity generated files and directories
+# ==============================================================================
+
+# Directories generated by Unity
+/Library/
+/Temp/
+/Obj/
+/Build/
+/UserSettings/
+/UnityPackageManager/
+# Cache directories for imported assets and packages (for older Unity versions/workflows)
+/AssetStore-5.x/
+/Packages/ # Only for locally unpacked packages, not for package cache.
+
+# ==============================================================================
+# Logs and other temporary files
+# ==============================================================================
+
+# Autogenerated VS/MD project files
+ExportedObj/
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+
+# Unity-specific generated files
+*.meta # This line is often excluded or carefully managed.
+       # DO NOT IGNORE .meta files for Assets/ and ProjectSettings/
+       # as they are crucial for Unity's asset serialization.
+       # This is typically only ignored if you explicitly manage generated C# files
+       # or want to ignore specific package meta files.
+       # For most projects, you would NOT include this line.
+
+# Specific meta files for generated things (e.g., input system if auto-generated C# is ignored)
+# Example for PlayerInputActions.cs:
+# Assets/Scripts/Input/PlayerInputActions.cs.meta # If you ignore PlayerInputActions.cs
+# You would keep:
+# !Assets/Scripts/Input/PlayerInputActions.inputactions # Keep the source .inputactions file!
+
+
+# Crash Logs
+**/CrashReports/
+
+# MemoryProfiler
+/MemoryProfiler/
+
+# ==============================================================================
+# Mac/OSX generated files
+# ==============================================================================
+
+.DS_Store
+.Trashes
+# Personal machine-specific generated files (OS X)
+*.pbxuser
+*.mode1v3
+*.xcuserstate
+
+# ==============================================================================
+# Linux generated files
+# ==============================================================================
+
+# build.log
+# unity_debug.log
+# unity_editor_log.txt
+
+# ==============================================================================
+# Built Player
+# ==============================================================================
+
+# Build results
+/Builds/
+/Exports/
+
+# ==============================================================================
+# Important: Assets and ProjectSettings
+# ==============================================================================
+# These directories and their .meta files MUST be under version control.
+# Ensure you do NOT accidentally ignore them.
+# The `*.meta` rule above is generally NOT recommended for most Unity projects
+# because it would ignore all .meta files, breaking asset references.
+# Only use `*.meta` if you have a very specific workflow to regenerate all meta files
+# or are ignoring specific generated code's meta files.
+
+# ==============================================================================
+# Specific overrides/exceptions
+# ==============================================================================
+
+# If you have specific auto-generated scripts (like from the Input System),
+# and you choose not to commit the generated C# file, you might add:
+# Assets/Scripts/Input/PlayerInputActions.cs
+
+# If you ignore the above, you MUST ensure the original .inputactions asset is committed:
+# !Assets/Scripts/Input/PlayerInputActions.inputactions
+";
+        }
+    }
+}
