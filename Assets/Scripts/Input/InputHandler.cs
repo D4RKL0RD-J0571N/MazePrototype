@@ -46,7 +46,7 @@ namespace Input
         private void Awake()
         {
             // Debug log to confirm Awake execution
-            Debug.Log("InputHandler: Awake called. Attempting to set Instance.", this);
+            // Debug.Log("InputHandler: Awake called. Attempting to set Instance.", this);
 
             // Singleton setup
             if (Instance != null && Instance != this)

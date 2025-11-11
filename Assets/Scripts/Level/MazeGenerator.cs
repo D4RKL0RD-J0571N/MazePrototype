@@ -21,7 +21,7 @@ namespace Level
         [SerializeField]
         public GameObject playerPrefab;
         [SerializeField]
-        public GameObject endMarker;
+        public GameObject endMarker; // This is a prefab
 
         [TitleGroup("Dependencies")] // Group other essential components
         [SerializeField]
@@ -31,11 +31,11 @@ namespace Level
         [Range(3, 101)] // Restrict width to odd numbers
         [OnValueChanged("EnsureOddWidth")] // Odin will call this method if width changes
         [InfoBox("Width and Height should be odd numbers for the Prim's algorithm to work correctly.", InfoMessageType.Warning, VisibleIf = "IsMazeDimensionInvalidForPrim")] // Updated VisibleIf
-        public int Width = 21;
+        public int Width;
 
         [Range(3, 101)] // Restrict height to odd numbers
         [OnValueChanged("EnsureOddHeight")] // Odin will call this method if height changes
-        public int Height = 21;
+        public int Height;
 
         [Tooltip("Use -1 for a random seed each time, or a specific number for repeatable mazes.")]
         public int Seed = -1;
@@ -81,6 +81,11 @@ namespace Level
         [ReadOnly]
         [PropertyTooltip("Container GameObject for all maze tiles and walls.")]
         private GameObject _tileContainer;
+        [BoxGroup("Runtime Information/Spawned Objects")]
+        [ReadOnly]
+        [PropertyTooltip("The spawned end marker GameObject.")]
+        private GameObject _spawnedEndMarker; // Keep a reference to the spawned end marker
+
 
         [BoxGroup("Runtime Information/Generation Status")]
         [ReadOnly]
@@ -167,14 +172,30 @@ namespace Level
         [Button(ButtonSizes.Large)]
         [GUIColor(0.4f, 0.8f, 0.4f)] // Greenish color
         [PropertySpace(SpaceBefore = 10, SpaceAfter = 10)] // Add some space around the button
-        public void GenerateMazeAsync()
+        /// <summary>
+        /// Starts the maze generation process using specified parameters.
+        /// If no parameters are provided, it falls back to the Inspector/default values.
+        /// </summary>
+        public void GenerateMazeAsync(int? width = null, int? height = null, int? seed = null, bool? autoPlaceStartEnd = null, Vector2Int? customStart = null, Vector2Int? customEnd = null)
         {
             if (_generateCoroutine != null)
             {
                 Debug.LogWarning("Maze generation already in progress. Stopping previous generation.");
                 StopCoroutine(_generateCoroutine);
             }
-            _generateCoroutine = StartCoroutine(GenerateMazeCoroutine());
+
+            // Use provided parameters, otherwise fall back to current Inspector values
+            int effectiveWidth = width ?? Width;
+            int effectiveHeight = height ?? Height;
+            int effectiveSeed = seed ?? Seed;
+            bool effectiveAutoPlaceStartEnd = autoPlaceStartEnd ?? AutoPlaceStartEnd;
+            Vector2Int? effectiveCustomStart = customStart ?? CustomStart;
+            Vector2Int? effectiveCustomEnd = customEnd ?? CustomEnd;
+
+
+            _generateCoroutine = StartCoroutine(GenerateMazeCoroutineInternal(
+                effectiveWidth, effectiveHeight, effectiveSeed, effectiveAutoPlaceStartEnd, effectiveCustomStart, effectiveCustomEnd
+            ));
         }
 
         // Exposed button to clear maze from Inspector
@@ -186,7 +207,7 @@ namespace Level
         }
 
 
-        private IEnumerator GenerateMazeCoroutine()
+        private IEnumerator GenerateMazeCoroutineInternal(int width, int height, int seed, bool autoPlaceStartEnd, Vector2Int? customStart, Vector2Int? customEnd)
         {
             ClearMaze();
 
@@ -195,35 +216,51 @@ namespace Level
                 Debug.LogError("Tile or Wall prefab is missing! Cannot generate maze.");
                 yield break;
             }
-            if (Seed >= 0) Random.InitState(Seed);
+            
+            // Set the effective dimensions and seed for THIS generation
+            // This updates the *internal* state for the current generation, but not the serialized fields.
+            int currentWidth = width % 2 == 0 ? width + 1 : width;
+            int currentHeight = height % 2 == 0 ? height + 1 : height;
+            int currentSeed = seed;
+            bool currentAutoPlaceStartEnd = autoPlaceStartEnd;
+            Vector2Int? currentCustomStart = customStart;
+            Vector2Int? currentCustomEnd = customEnd;
 
-            // These ensure statements are technically redundant now due to OnValueChanged,
-            // but keeping them as a safeguard for runtime calls or if OnValueChanged is somehow skipped.
-            Width = Width % 2 == 0 ? Width + 1 : Width;
-            Height = Height % 2 == 0 ? Height + 1 : Height;
+            if (currentSeed >= 0) Random.InitState(currentSeed);
+            else Random.InitState(System.Environment.TickCount); // Use a new random seed if not specified
 
-            _grid = new MazeCell[Width, Height];
-            InitializeGrid();
+            // Update the MazeGenerator's *display* properties in the Inspector
+            // This is optional, but makes debugging easier to see what was actually used.
+            Width = currentWidth;
+            Height = currentHeight;
+            Seed = currentSeed;
+            AutoPlaceStartEnd = currentAutoPlaceStartEnd;
+            CustomStart = currentCustomStart;
+            CustomEnd = currentCustomEnd;
 
-            yield return RunPrimAlgorithmAsync();
-            yield return BuildVisualTilesAsync();
+
+            _grid = new MazeCell[currentWidth, currentHeight];
+            InitializeGrid(currentWidth, currentHeight); // Pass dimensions to InitializeGrid
+
+            yield return RunPrimAlgorithmAsync(currentWidth, currentHeight); // Pass dimensions
+            yield return BuildVisualTilesAsync(currentWidth, currentHeight, currentAutoPlaceStartEnd, currentCustomStart, currentCustomEnd); // Pass relevant generation parameters
 
             _generateCoroutine = null;
         }
 
-        private void InitializeGrid()
+        private void InitializeGrid(int width, int height) // Accept dimensions
         {
-            for (int x = 0; x < Width; x++)
-            for (int y = 0; y < Height; y++)
+            for (int x = 0; x < width; x++)
+            for (int y = 0; y < height; y++)
                 _grid[x, y] = new MazeCell(x, y, true);
         }
 
-        private IEnumerator RunPrimAlgorithmAsync()
+        private IEnumerator RunPrimAlgorithmAsync(int width, int height) // Accept dimensions
         {
             var frontier = new List<Vector2Int>();
             Vector2Int start = new Vector2Int(1, 1);
             _grid[start.x, start.y].IsWall = false;
-            AddFrontier(start, frontier);
+            AddFrontier(start, frontier, width, height); // Pass dimensions
 
             while (frontier.Count > 0)
             {
@@ -231,45 +268,45 @@ namespace Level
                 Vector2Int cellPos = frontier[index];
                 frontier.RemoveAt(index);
 
-                Vector2Int? neighbor = GetVisitedNeighbor(cellPos);
+                Vector2Int? neighbor = GetVisitedNeighbor(cellPos, width, height); // Pass dimensions
                 if (neighbor.HasValue)
                 {
                     Vector2Int between = (cellPos + neighbor.Value) / 2;
                     _grid[cellPos.x, cellPos.y].IsWall = false;
                     _grid[between.x, between.y].IsWall = false;
-                    AddFrontier(cellPos, frontier);
+                    AddFrontier(cellPos, frontier, width, height); // Pass dimensions
                 }
 
                 if (frontier.Count % 10 == 0) yield return null;
             }
         }
 
-        private void AddFrontier(Vector2Int cell, List<Vector2Int> frontier)
+        private void AddFrontier(Vector2Int cell, List<Vector2Int> frontier, int width, int height) // Accept dimensions
         {
             foreach (var dir in directions)
             {
                 Vector2Int next = cell + dir;
-                if (IsInside(next) && _grid[next.x, next.y].IsWall && !frontier.Contains(next))
+                if (IsInside(next, width, height) && _grid[next.x, next.y].IsWall && !frontier.Contains(next)) // Use passed dimensions
                     frontier.Add(next);
             }
         }
 
-        private Vector2Int? GetVisitedNeighbor(Vector2Int cell)
+        private Vector2Int? GetVisitedNeighbor(Vector2Int cell, int width, int height) // Accept dimensions
         {
             var visited = new List<Vector2Int>();
             foreach (var dir in directions)
             {
                 Vector2Int next = cell + dir;
-                if (IsInside(next) && !_grid[next.x, next.y].IsWall)
+                if (IsInside(next, width, height) && !_grid[next.x, next.y].IsWall) // Use passed dimensions
                     visited.Add(next);
             }
 
             return visited.Count > 0 ? visited[Random.Range(0, visited.Count)] : null;
         }
 
-        private IEnumerator BuildVisualTilesAsync()
+        private IEnumerator BuildVisualTilesAsync(int width, int height, bool autoPlaceStartEnd, Vector2Int? customStart, Vector2Int? customEnd) // Accept parameters
         {
-            int total = Width * Height;
+            int total = width * height; // Use passed width/height
 
             if (_tileContainer == null)
             {
@@ -277,24 +314,56 @@ namespace Level
                 _tileContainer.transform.SetParent(transform);
             }
 
+            // Before populating, ensure _spawnedEndMarker is clear
+            if (_spawnedEndMarker != null)
+            {
+                Destroy(_spawnedEndMarker);
+                _spawnedEndMarker = null;
+            }
+
             yield return WaitForTilesToBecomeIdle();
 
-            foreach (var obj in activeTiles)
+            // Iterate activeTiles by index to avoid modifying collection during iteration
+            for(int i = activeTiles.Count - 1; i >= 0; i--)
             {
-                if (obj.CompareTag("Wall"))
+                GameObject obj = activeTiles[i];
+                if (obj == null) continue; // Safety check
+                
+                // Determine if it's a wall or floor based on its prefab origin or internal state
+                // Since we don't use tags, compare against the wallPrefab itself or check MazeTile component properties if applicable.
+                // Assuming wallPrefab is the one that produces wall objects:
+                if (obj.name.Contains(wallPrefab.name)) // Simple check, might not be robust if names are similar
+                {
                     _wallPool.Release(obj);
-                else
+                }
+                else // Assume it's a floor tile if not a wall
+                {
                     _tilePool.Release(obj);
+                }
             }
             activeTiles.Clear();
 
-            _tileContainer.transform.DetachChildren();
+            // Detach children before pooling to prevent errors if pool.Release tries to access transform hierarchy
+            if (_tileContainer != null)
+            {
+                 // Create a temporary list to avoid modifying during iteration
+                List<Transform> childrenToDetach = new List<Transform>();
+                foreach (Transform child in _tileContainer.transform)
+                {
+                    childrenToDetach.Add(child);
+                }
+                foreach (Transform child in childrenToDetach)
+                {
+                    child.SetParent(null); // Detach from container before pooling
+                }
+            }
+
 
             bool globalRGBSyncEnabled = RGBSyncManager.Instance != null && RGBSyncManager.Instance.CurrentSettings.Enabled;
 
-            for (int x = 0; x < Width; x++)
+            for (int x = 0; x < width; x++) // Use passed width
             {
-                for (int y = 0; y < Height; y++)
+                for (int y = 0; y < height; y++) // Use passed height
                 {
                     Vector2Int pos = new Vector2Int(x, y);
                     GameObject obj = _grid[x, y].IsWall ? _wallPool.Get() : _tilePool.Get();
@@ -319,7 +388,7 @@ namespace Level
                     }
 
 
-                    int built = x * Height + y;
+                    int built = x * height + y; // Use passed height
                     if (built % 50 == 0)
                     {
                         float progress = built / (float)total;
@@ -331,37 +400,99 @@ namespace Level
 
             OnBuildProgress?.Invoke(1f);
 
-            if (AutoPlaceStartEnd)
-                PlaceStartAndEnd();
+            // Pass parameters to PlaceStartAndEnd
+            if (autoPlaceStartEnd || (customStart.HasValue && customEnd.HasValue)) // Only place if custom values are provided AND auto-place is false
+                PlaceStartAndEnd(width, height, customStart, customEnd);
+            
         }
 
         private IEnumerator WaitForTilesToBecomeIdle()
         {
-            int count = 0;
-            foreach (var obj in activeTiles)
+            // Iterate through a copy or use a while loop with activeTiles.Count to prevent issues
+            // if tiles are removed from activeTiles during iteration (e.g. if an external system clears them).
+            // For now, assuming activeTiles is only modified by this class, the current loop is fine.
+            // Also, since we are not using tags, we need to check if the object is actually a floor tile
+            // before waiting for it to become idle.
+            for(int i = 0; i < activeTiles.Count; i++)
             {
-                if (!obj.CompareTag("Wall") && obj.TryGetComponent(out MazeTile tile))
+                var obj = activeTiles[i];
+                // Only wait for "tile" prefabs (floor tiles) to become idle. Walls don't have this behavior.
+                if (obj != null && obj.name.Contains(tilePrefab.name) && obj.TryGetComponent(out MazeTile tile))
                 {
                     yield return tile.WaitUntilIdle();
-                    count++;
-                    if (count % 10 == 0)
+                    if (i % 10 == 0) // Yield periodically to avoid freezing
                         yield return null;
                 }
             }
         }
 
 
-        private void PlaceStartAndEnd()
+        // Updated to accept generation parameters
+        private void PlaceStartAndEnd(int width, int height, Vector2Int? customStart, Vector2Int? customEnd)
         {
-            Vector2Int startPos = CustomStart ?? new Vector2Int(1, 1);
-            Vector2Int endPos = CustomEnd ?? new Vector2Int(Width - 2, Height - 2);
+            // Use provided custom positions, otherwise calculate default based on *current* width/height
+            Vector2Int startPos = customStart ?? new Vector2Int(1, 1);
+            Vector2Int endPos = customEnd ?? new Vector2Int(width - 2, height - 2);
+
+            // Ensure startPos and endPos are within bounds and on a path tile
+            // This is crucial if custom values are arbitrary or if the maze generation
+            // doesn't guarantee specific start/end path tiles
+            startPos = ClampToValidPosition(startPos, width, height);
+            endPos = ClampToValidPosition(endPos, width, height);
+
 
             if (_spawnedPlayer != null)
                 Destroy(_spawnedPlayer);
 
             _spawnedPlayer = Instantiate(playerPrefab, AlignToGrid(startPos), Quaternion.identity);
-            Instantiate(endMarker, AlignToGrid(endPos), Quaternion.identity, transform);
-            cameraFollow.Target = _spawnedPlayer.transform;
+            
+            // Destroy existing end markers before creating a new one
+            if (_spawnedEndMarker != null)
+            {
+                Destroy(_spawnedEndMarker);
+            }
+            _spawnedEndMarker = Instantiate(endMarker, AlignToGrid(endPos), Quaternion.identity, transform); // Store reference
+            
+            if (cameraFollow != null)
+            {
+                cameraFollow.Target = _spawnedPlayer.transform;
+            }
+            else
+            {
+                Debug.LogWarning("MazeGenerator: CameraFollow not assigned, player camera will not track.");
+            }
+
+            Debug.Log($"Maze generated. Player at: {startPos}, End at: {endPos}.");
+        }
+
+        // Helper to clamp position to a valid, non-wall tile
+        private Vector2Int ClampToValidPosition(Vector2Int pos, int width, int height)
+        {
+            // Basic clamping to ensure within grid boundaries
+            pos.x = Mathf.Clamp(pos.x, 1, width - 2);
+            pos.y = Mathf.Clamp(pos.y, 1, height - 2);
+
+            // Find nearest non-wall cell if the clamped position is a wall
+            if (_grid[pos.x, pos.y].IsWall)
+            {
+                for (int d = 0; d < Mathf.Max(width, height); d++) // Search radius
+                {
+                    for (int i = -d; i <= d; i++)
+                    {
+                        for (int j = -d; j <= d; j++)
+                        {
+                            Vector2Int searchPos = new Vector2Int(pos.x + i, pos.y + j);
+                            if (IsInside(searchPos, width, height) && !_grid[searchPos.x, searchPos.y].IsWall)
+                            {
+                                return searchPos;
+                            }
+                        }
+                    }
+                }
+                Debug.LogWarning($"Could not find a valid path tile near {pos}. Defaulting to (1,1).");
+                return new Vector2Int(1,1); // Fallback if no path tile found (unlikely for well-formed mazes)
+            }
+            return pos;
         }
 
         private Vector3 AlignToGrid(Vector2Int pos) => new Vector3(pos.x + 0.5f, pos.y + 0.5f, 0);
@@ -375,16 +506,36 @@ namespace Level
                 _generateCoroutine = null;
             }
 
-            foreach (var obj in activeTiles)
+            // Before releasing to pool, ensure all active tiles are detached from container
+            if (_tileContainer != null)
             {
-                if (obj.CompareTag("Wall"))
+                List<Transform> childrenToDetach = new List<Transform>();
+                foreach (Transform child in _tileContainer.transform)
+                {
+                    childrenToDetach.Add(child);
+                }
+                foreach (Transform child in childrenToDetach)
+                {
+                    child.SetParent(null); // Detach from container before pooling
+                }
+            }
+
+
+            // Iterate activeTiles by index to avoid modifying collection during iteration
+            for(int i = activeTiles.Count - 1; i >= 0; i--)
+            {
+                GameObject obj = activeTiles[i];
+                if (obj == null) continue; // Safety check
+                
+                // Determine if it's a wall or floor based on its prefab origin or internal state
+                if (obj.name.Contains(wallPrefab.name))
                 {
                     _wallPool.Release(obj);
                 }
                 else
                 {
                     if (obj.TryGetComponent(out MazeTile tile))
-                        tile.ResetTile();
+                        tile.ResetTile(); // Reset state before pooling
 
                     _tilePool.Release(obj);
                 }
@@ -397,18 +548,20 @@ namespace Level
                 _spawnedPlayer = null;
             }
 
-            var existingEndMarker = transform.Find(endMarker.name.Replace("(Clone)", ""));
-            if (existingEndMarker != null)
+            // Destroy the specific spawned end marker reference
+            if (_spawnedEndMarker != null)
             {
-                Destroy(existingEndMarker.gameObject);
+                Destroy(_spawnedEndMarker);
+                _spawnedEndMarker = null;
             }
 
             _grid = null;
         }
 
 
-        private bool IsInside(Vector2Int pos) =>
-            pos.x >= 0 && pos.x < Width && pos.y >= 0 && pos.y < Height;
+        // Updated to accept dimensions for the current generation context
+        private bool IsInside(Vector2Int pos, int width, int height) =>
+            pos.x >= 0 && pos.x < width && pos.y >= 0 && pos.y < height;
 
         /// <summary>
         /// Sets the custom colors for floor (revealed) and wall (hidden) tiles and applies them to existing tiles.
@@ -423,6 +576,7 @@ namespace Level
             // Apply these colors to all currently active MazeTile instances
             foreach (var obj in activeTiles)
             {
+                if (obj == null) continue; // Safety check
                 if (obj.TryGetComponent(out MazeTile tile))
                 {
                     // If it's a floor tile (not a wall in the maze grid logic, but represented by MazeTile)
@@ -436,5 +590,7 @@ namespace Level
                 }
             }
         }
+        
+        
     }
 }

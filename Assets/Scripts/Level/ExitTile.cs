@@ -9,18 +9,20 @@ namespace Level
         [SerializeField] private string winMessage = "You win!";
         [SerializeField] private float centerProximityThreshold = 0.2f; // How close the player must be to the center
 
-        private bool _hasTriggered = false;
+        private bool _hasTriggered;
 
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (_hasTriggered || !other.CompareTag("Player")) return;
             TryTriggerExit(other.transform.position);
+            ResetTrigger();
         }
 
         private void OnTriggerStay2D(Collider2D other)
         {
             if (_hasTriggered || !other.CompareTag("Player")) return;
             TryTriggerExit(other.transform.position);
+            ResetTrigger();
         }
 
         private void TryTriggerExit(Vector2 playerPos)

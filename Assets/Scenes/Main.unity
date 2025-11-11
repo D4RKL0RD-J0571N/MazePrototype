@@ -228,6 +228,37 @@ MonoBehaviour:
   offset: {x: 0, y: 0, z: -10}
   dampingTime: 0.3
   lookAtTarget: 0
+--- !u!1 &881666015
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 881666016}
+  m_Layer: 0
+  m_Name: MazeTiles
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &881666016
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 881666015}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2066674238}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1920761354
 GameObject:
   m_ObjectHideFlags: 0
@@ -331,8 +362,8 @@ MonoBehaviour:
   playerPrefab: {fileID: 3815133595724860968, guid: 3ca0d23259be1b94fb6456c432796392, type: 3}
   endMarker: {fileID: 1464207283225819641, guid: a56a3431b99c43a47996337f78b2a201, type: 3}
   cameraFollow: {fileID: 519420033}
-  Width: 11
-  Height: 11
+  Width: 3
+  Height: 3
   Seed: -1
   AutoPlaceStartEnd: 1
 --- !u!4 &2066674238
@@ -347,7 +378,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 881666016}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2066674239

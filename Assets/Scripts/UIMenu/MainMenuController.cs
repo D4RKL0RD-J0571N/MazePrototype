@@ -1,5 +1,5 @@
 using Input;
-using Level; // Added for MazeGenerator and MazeTile related types
+using Level;
 using UnityEngine;
 using UnityEngine.UIElements;
 using System.Collections.Generic;
@@ -23,7 +23,6 @@ namespace UIMenu
         private Player.PlayerController playerController;
         
         // InputHandler is a singleton, so we assign it in OnEnable.
-        // [SerializeField] is removed here as it won't be set in Inspector, but via Instance.
         [PropertyTooltip("Reference to the InputHandler singleton. Assigned programmatically.")]
         private InputHandler _inputHandler; 
 
@@ -123,27 +122,56 @@ namespace UIMenu
 
         void OnEnable()
         {
-            // Assign InputHandler instance here for safe initialization
             _inputHandler = InputHandler.Instance;
             if (_inputHandler == null)
             {
                 Debug.LogError("MainMenuController: InputHandler.Instance is null. Ensure InputHandler is initialized before MainMenuController.", this);
+                enabled = false; // Disable this script if essential dependency is missing
+                return;
             }
 
-            _rootElement = uiDocument.rootVisualElement;
+            if (uiDocument == null)
+            {
+                Debug.LogError("MainMenuController: UIDocument is not assigned. Cannot initialize UI.", this);
+                enabled = false;
+                return;
+            }
 
-            // Assign UI elements
+            // IMPORTANT: Add checks for MazeGenerator and PlayerController here
+            if (mazeGenerator == null)
+            {
+                Debug.LogError("MainMenuController: MazeGenerator is not assigned. Please assign it in the Inspector.", this);
+                enabled = false;
+                return;
+            }
+            if (playerController == null)
+            {
+                Debug.LogError("MainMenuController: PlayerController is not assigned. Please assign it in the Inspector.", this);
+                enabled = false;
+                return;
+            }
+            // -------------------------------------------------------------------------
+
+            _rootElement = uiDocument.rootVisualElement;
+            if (_rootElement == null)
+            {
+                Debug.LogError("MainMenuController: Root VisualElement not found. Check UIDocument setup.", this);
+                enabled = false;
+                return;
+            }
+
+            // Assign UI elements (rest of your UI element assignments are fine)
             _mainTitleLabel = _rootElement.Q<Label>("main-title");
             _mainMenuPanel = _rootElement.Q<VisualElement>("main-menu");
             _optionsPanel = _rootElement.Q<VisualElement>("options-panel");
-            _exitMenuPanel = _rootElement.Q<VisualElement>("exit-menu-panel"); // NEW
+            _exitMenuPanel = _rootElement.Q<VisualElement>("exit-menu-panel"); 
 
             // Main Menu Elements
             _startButton = _rootElement.Q<Button>("start-button");
             _optionsButton = _rootElement.Q<Button>("options-button");
             _exitButton = _rootElement.Q<Button>("exit-button");
 
-            // NEW: Exit Menu Elements
+            // Exit Menu Elements
             _exitNewMazeButton = _rootElement.Q<Button>("exit-new-maze-button");
             _exitReturnToMainMenuButton = _rootElement.Q<Button>("exit-main-menu-button");
             _exitAutoGenerateToggle = _rootElement.Q<Toggle>("auto-generate-toggle");
@@ -162,7 +190,7 @@ namespace UIMenu
             _applyButton = _rootElement.Q<Button>("apply-button");
             _backButton = _rootElement.Q<Button>("back-button");
 
-            // NEW: Tile Color Customization Elements
+            // Tile Color Customization Elements
             _floorColorDisplay = _rootElement.Q<VisualElement>("floor-color-display");
             _floorRSlider = _rootElement.Q<Slider>("floor-r-slider");
             _floorGSlider = _rootElement.Q<Slider>("floor-g-slider");
@@ -180,11 +208,9 @@ namespace UIMenu
             _optionsButton.text = "Options";
             _exitButton.text = "Exit";
 
-            // NEW: Exit Menu Text
             _exitNewMazeButton.text = "New Maze";
             _exitReturnToMainMenuButton.text = "Main Menu";
             _exitAutoGenerateToggle.label = "Auto-Generate on Exit";
-
 
             _widthField.label = "MAZE WIDTH";
             _heightField.label = "MAZE HEIGHT";
@@ -199,7 +225,6 @@ namespace UIMenu
             _applyButton.text = "Apply Settings";
             _backButton.text = "Back to Main Menu";
 
-            // Set slider ranges once (not duplicated)
             _cycleSpeedSlider.lowValue = 0.1f;
             _cycleSpeedSlider.highValue = 10f;
             _saturationSlider.lowValue = 0f;
@@ -207,7 +232,6 @@ namespace UIMenu
             _brightnessSlider.lowValue = 0f;
             _brightnessSlider.highValue = 1f;
 
-            // NEW: Color slider ranges
             _floorRSlider.lowValue = 0f; _floorRSlider.highValue = 1f; _floorRSlider.label = "R";
             _floorGSlider.lowValue = 0f; _floorGSlider.highValue = 1f; _floorGSlider.label = "G";
             _floorBSlider.lowValue = 0f; _floorBSlider.highValue = 1f; _floorBSlider.label = "B";
@@ -218,10 +242,7 @@ namespace UIMenu
             // --- End Populate UI Element Text and Properties ---
 
             // Register event callbacks
-            if (_inputHandler != null)
-            {
-                _inputHandler.OnCancelInput += HandleCancel;
-            }
+            _inputHandler.OnCancelInput += HandleCancel;
             GameEvents.OnPlayerReachedExit += HandlePlayerReachedExit;
 
             // Load saved settings (includes RGB from RGBSyncManager)
@@ -233,8 +254,7 @@ namespace UIMenu
 
             // Initialize UI state: Show main menu and set input maps accordingly
             ShowPanel(_mainMenuPanel);
-            SetGamePaused(true); // This call will correctly manage the input maps at startup
-            _isMenuShown = true;
+            SetGamePaused(true); 
 
             // Register button callbacks
             _startButton.clicked += OnStartButtonClicked;
@@ -243,13 +263,12 @@ namespace UIMenu
             _applyButton.clicked += OnApplyButtonClicked;
             _backButton.clicked += OnBackButtonClicked;
 
-            // NEW: Register Exit Menu button callbacks
+            // Register Exit Menu button callbacks
             _exitNewMazeButton.clicked += OnExitNewMazeButtonClicked;
             _exitReturnToMainMenuButton.clicked += OnExitReturnToMainMenuButtonClicked;
-            // Register callback for auto-generate toggle to save state immediately
             _exitAutoGenerateToggle.RegisterValueChangedCallback(evt => PlayerPrefs.SetInt("autoGenerateOnExit", evt.newValue ? 1 : 0));
 
-            // NEW: Register color slider callbacks to update display immediately
+            // Register color slider callbacks to update display immediately
             _floorRSlider.RegisterValueChangedCallback(evt => UpdateColorDisplay(_floorRSlider, _floorGSlider, _floorBSlider, _floorColorDisplay));
             _floorGSlider.RegisterValueChangedCallback(evt => UpdateColorDisplay(_floorRSlider, _floorGSlider, _floorBSlider, _floorColorDisplay));
             _floorBSlider.RegisterValueChangedCallback(evt => UpdateColorDisplay(_floorRSlider, _floorGSlider, _floorBSlider, _floorColorDisplay));
@@ -274,12 +293,12 @@ namespace UIMenu
             _applyButton.clicked -= OnApplyButtonClicked;
             _backButton.clicked -= OnBackButtonClicked;
 
-            // NEW: Unregister Exit Menu button callbacks
+            // Unregister Exit Menu button callbacks
             _exitNewMazeButton.clicked -= OnExitNewMazeButtonClicked;
             _exitReturnToMainMenuButton.clicked -= OnExitReturnToMainMenuButtonClicked;
             _exitAutoGenerateToggle.UnregisterValueChangedCallback(evt => PlayerPrefs.SetInt("autoGenerateOnExit", evt.newValue ? 1 : 0)); // Unregister
 
-            // NEW: Unregister color slider callbacks
+            // Unregister color slider callbacks
             _floorRSlider.UnregisterValueChangedCallback(evt => UpdateColorDisplay(_floorRSlider, _floorGSlider, _floorBSlider, _floorColorDisplay));
             _floorGSlider.UnregisterValueChangedCallback(evt => UpdateColorDisplay(_floorRSlider, _floorGSlider, _floorBSlider, _floorColorDisplay));
             _floorBSlider.UnregisterValueChangedCallback(evt => UpdateColorDisplay(_floorRSlider, _floorGSlider, _floorBSlider, _floorColorDisplay));
@@ -315,11 +334,19 @@ namespace UIMenu
 
         private void LoadSettings()
         {
-            // Load maze settings
+            // Load maze settings into UI fields AND MazeGenerator's properties
             _widthField.value = PlayerPrefs.GetInt("mazeWidth", mazeGenerator.Width);
             _heightField.value = PlayerPrefs.GetInt("mazeHeight", mazeGenerator.Height);
             _seedField.value = PlayerPrefs.GetInt("mazeSeed", mazeGenerator.Seed);
             _autoPlaceToggle.value = PlayerPrefs.GetInt("autoPlace", mazeGenerator.AutoPlaceStartEnd ? 1 : 0) == 1;
+
+            // For MazeGenerator's public fields, directly assign them here on load
+            // This ensures the Inspector values of MazeGenerator reflect loaded settings
+            mazeGenerator.Width = _widthField.value;
+            mazeGenerator.Height = _heightField.value;
+            mazeGenerator.Seed = _seedField.value;
+            mazeGenerator.AutoPlaceStartEnd = _autoPlaceToggle.value;
+
 
             // Load RGB settings from RGBSyncManager's current state
             if (RGBSyncManager.Instance != null)
@@ -339,24 +366,42 @@ namespace UIMenu
             _controlModeDropdown.index = _controlModeDropdown.choices.IndexOf(savedControlMode);
             if (_controlModeDropdown.index == -1) _controlModeDropdown.index = 0; // Default to Keyboard if not found
 
-            // NEW: Load auto-generate on exit toggle
+            // Load auto-generate on exit toggle
             _exitAutoGenerateToggle.value = PlayerPrefs.GetInt("autoGenerateOnExit", 0) == 1; // Default to false
 
-            // NEW: Load tile colors
+            // Load tile colors
             Color loadedFloorColor = GetColorFromPlayerPrefs("floorColor", Color.white);
             SetSlidersFromColor(loadedFloorColor, _floorRSlider, _floorGSlider, _floorBSlider, _floorColorDisplay);
 
             Color loadedWallColor = GetColorFromPlayerPrefs("wallColor", Color.black);
             SetSlidersFromColor(loadedWallColor, _wallRSlider, _wallGSlider, _wallBSlider, _wallColorDisplay);
+
+            // Apply loaded colors to maze generator immediately
+            if (mazeGenerator != null)
+            {
+                mazeGenerator.SetTileColors(loadedFloorColor, loadedWallColor);
+            }
         }
 
         private void SaveSettings()
         {
-            // Save maze settings
+            // Save maze settings from UI fields to PlayerPrefs
             PlayerPrefs.SetInt("mazeWidth", _widthField.value);
             PlayerPrefs.SetInt("mazeHeight", _heightField.value);
             PlayerPrefs.SetInt("mazeSeed", _seedField.value);
             PlayerPrefs.SetInt("autoPlace", _autoPlaceToggle.value ? 1 : 0);
+
+            // OPTIONAL: Also update MazeGenerator's public fields directly here,
+            // so if you check its Inspector, they reflect the saved values.
+            // This is primarily for visual debugging/inspection in the editor.
+            if (mazeGenerator != null)
+            {
+                mazeGenerator.Width = _widthField.value;
+                mazeGenerator.Height = _heightField.value;
+                mazeGenerator.Seed = _seedField.value;
+                mazeGenerator.AutoPlaceStartEnd = _autoPlaceToggle.value;
+            }
+
 
             // Create a temporary RGBEffectSettings object from UI values
             RGBEffectSettings currentRgbUISettings = new RGBEffectSettings
@@ -378,14 +423,14 @@ namespace UIMenu
             PlayerPrefs.SetString("difficulty", _difficultyDropdown.value);
             PlayerPrefs.SetString("controlMode", _controlModeDropdown.value);
 
-            // NEW: Save tile colors
+            // Save tile colors
             Color currentFloorColor = GetColorFromSliders(_floorRSlider, _floorGSlider, _floorBSlider);
             SaveColorToPlayerPrefs("floorColor", currentFloorColor);
 
             Color currentWallColor = GetColorFromSliders(_wallRSlider, _wallGSlider, _wallBSlider);
             SaveColorToPlayerPrefs("wallColor", currentWallColor);
             
-            // NEW: Call MazeGenerator to apply new colors (MazeGenerator will then update MazeTiles)
+            // Call MazeGenerator to apply new colors (MazeGenerator will then update MazeTiles)
             if (mazeGenerator != null)
             {
                 mazeGenerator.SetTileColors(currentFloorColor, currentWallColor);
@@ -397,13 +442,31 @@ namespace UIMenu
 
         private void OnStartButtonClicked()
         {
+            Debug.Log("OnStartButtonClicked: Start button clicked.");
+            SaveSettings(); // Ensure all latest settings are saved and applied
+
+            // Immediately remove the fade-out class to ensure UI doesn't block later actions
+            _rootElement.RemoveFromClassList("fade-out"); 
+            // Then, add the fade-out class if you still want a visual transition
             _rootElement.AddToClassList("fade-out"); // Assumes CSS handles the fade effect
-            Invoke(nameof(GenerateMazeAfterFade), 0.5f);
-            SetGamePaused(false); // Unpause when starting game, and switch input maps
+
+            // Instead of Invoke, directly call a coroutine helper.
+            // This bypasses issues with Time.timeScale affecting Invoke.
+            StartCoroutine(StartGameRoutine()); 
         }
+
+        private System.Collections.IEnumerator StartGameRoutine()
+        {
+            // Give a short delay to allow the fade-out CSS to start
+            yield return new WaitForSecondsRealtime(0.5f); // Use Realtime to ignore Time.timeScale
+
+            GenerateMazeAndResumeGame();
+        }
+
 
         private void OnOptionsButtonClicked()
         {
+            Debug.Log("OnOptionsButtonClicked: Options button clicked.");
             ShowPanel(_optionsPanel);
             // Ensure UI sliders reflect current active RGB settings when opening options
             if (RGBSyncManager.Instance != null)
@@ -417,6 +480,7 @@ namespace UIMenu
 
         private void OnExitButtonClicked()
         {
+            Debug.Log("OnExitButtonClicked: Exit button clicked. Quitting application.");
             Application.Quit();
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false; // Stop play mode in editor
@@ -425,28 +489,30 @@ namespace UIMenu
 
         private void OnApplyButtonClicked()
         {
+            Debug.Log("OnApplyButtonClicked: Apply Settings button clicked.");
             SaveSettings();
         }
 
         private void OnBackButtonClicked()
         {
+            Debug.Log("OnBackButtonClicked: Back button clicked.");
             ShowPanel(_mainMenuPanel);
         }
 
-        // NEW: Handlers for Exit Menu buttons
+        // Handlers for Exit Menu buttons
         private void OnExitNewMazeButtonClicked()
         {
+            Debug.Log("OnExitNewMazeButtonClicked: New Maze button clicked (from Exit Menu).");
+            SaveSettings(); // Ensure all latest settings are saved and applied
             _rootElement.AddToClassList("fade-out");
-            Invoke(nameof(GenerateMazeAfterFade), 0.5f);
-            SetGamePaused(false);
-            // The auto-generate toggle state is saved via its ValueChangedCallback
+            StartCoroutine(StartGameRoutine()); // Use the same routine for consistency
         }
 
         private void OnExitReturnToMainMenuButtonClicked()
         {
+            Debug.Log("OnExitReturnToMainMenuButtonClicked: Return to Main Menu button clicked.");
             ShowPanel(_mainMenuPanel);
             SetGamePaused(true); // Ensure UI input is active for main menu
-            // The auto-generate toggle state is saved via its ValueChangedCallback
         }
 
         /// <summary>
@@ -455,12 +521,13 @@ namespace UIMenu
         /// </summary>
         private void HandleCancel()
         {
+            Debug.Log("HandleCancel: Cancel input detected.");
             // If Options panel is visible, pressing Cancel goes back to Main Menu
             if (_optionsPanel.resolvedStyle.display == DisplayStyle.Flex)
             {
                 ShowPanel(_mainMenuPanel);
             }
-            // NEW: If Exit Menu panel is visible, pressing Cancel goes back to Main Menu
+            // If Exit Menu panel is visible, pressing Cancel goes back to Main Menu
             else if (_exitMenuPanel.resolvedStyle.display == DisplayStyle.Flex)
             {
                 ShowPanel(_mainMenuPanel);
@@ -468,8 +535,12 @@ namespace UIMenu
             // If Main Menu is visible (and not Options/Exit), pressing Cancel hides the menu (unpauses)
             else if (_mainMenuPanel.resolvedStyle.display == DisplayStyle.Flex)
             {
-                HideAllPanels();
-                SetGamePaused(false); // Unpause the game
+                // Only allow hiding the menu if the game is currently paused (meaning we're in-game and accessed menu)
+                if (Time.timeScale == 0f) 
+                {
+                    HideAllPanels();
+                    SetGamePaused(false); // Unpause the game
+                }
             }
             // If no menu is visible (i.e., in game), pressing Cancel shows the Main Menu (pauses)
             else
@@ -486,34 +557,28 @@ namespace UIMenu
         /// <param name="panelToShow">The VisualElement panel to display. If null, all panels are hidden.</param>
         private void ShowPanel(VisualElement panelToShow)
         {
+            Debug.Log($"ShowPanel: Attempting to show {panelToShow?.name ?? "null"} panel.");
             _mainMenuPanel.style.display = DisplayStyle.None;
             _optionsPanel.style.display = DisplayStyle.None;
-            _exitMenuPanel.style.display = DisplayStyle.None; // NEW: Hide exit menu
-            _backButton.style.display = DisplayStyle.None; // Ensure back button is hidden by default
+            _exitMenuPanel.style.display = DisplayStyle.None; 
+            _backButton.style.display = DisplayStyle.None; 
 
             if (panelToShow != null)
             {
                 _rootElement.style.display = DisplayStyle.Flex; // Show the root UI if any panel is to be shown
-                if (panelToShow == _mainMenuPanel)
+                
+                panelToShow.style.display = DisplayStyle.Flex; // Show the requested panel directly
+
+                if (panelToShow == _optionsPanel)
                 {
-                    _mainMenuPanel.style.display = DisplayStyle.Flex;
-                }
-                else if (panelToShow == _optionsPanel)
-                {
-                    _optionsPanel.style.display = DisplayStyle.Flex;
                     _backButton.style.display = DisplayStyle.Flex; // Show back button only for options
                 }
-                else if (panelToShow == _exitMenuPanel) // NEW: Show exit menu
-                {
-                    _exitMenuPanel.style.display = DisplayStyle.Flex;
-                    // No back button for the exit panel, as it has explicit options
-                }
-                _isMenuShown = true;
             }
             else
             {
-                HideAllPanels(); // If null, hide everything
+                HideAllPanels(); 
             }
+             Debug.Log($"ShowPanel: {_mainMenuPanel.name} display: {_mainMenuPanel.style.display}, {_optionsPanel.name} display: {_optionsPanel.style.display}, {_exitMenuPanel.name} display: {_exitMenuPanel.style.display}");
         }
 
         /// <summary>
@@ -522,85 +587,113 @@ namespace UIMenu
         /// </summary>
         private void HideAllPanels()
         {
+            Debug.Log("HideAllPanels: Hiding all UI panels.");
             _mainMenuPanel.style.display = DisplayStyle.None;
             _optionsPanel.style.display = DisplayStyle.None;
-            _exitMenuPanel.style.display = DisplayStyle.None; // NEW: Hide exit menu
+            _exitMenuPanel.style.display = DisplayStyle.None; 
             _backButton.style.display = DisplayStyle.None;
             _rootElement.style.display = DisplayStyle.None; // Hide the root UI element
-            _isMenuShown = false;
         }
 
         /// <summary>
-        /// Controls the game's paused state by setting Time.timeScale and player input.
-        /// Also, explicitly manages the active Input System action maps.
+        /// Sets the game's paused state, manages Time.timeScale,
+        /// and switches between Gameplay and UI input action maps.
+        /// This method is now public for external calls if needed (e.g., by GameManager).
         /// </summary>
-        /// <param name="paused">True to pause, false to unpause.</param>
-        private void SetGamePaused(bool paused)
+        /// <param name="isPaused">True to pause the game, false to unpause.</param>
+        public void SetGamePaused(bool isPaused)
         {
-            Time.timeScale = paused ? 0f : 1f;
+            _isMenuShown = isPaused; // Update internal state based on pause status
+            Debug.Log($"SetGamePaused: isPaused = {isPaused}");
 
-            if (playerController != null)
+            if (isPaused)
             {
-                playerController.SetInputEnabled(!paused);
-            }
-            else
-            {
-                Debug.LogWarning("MainMenuController: PlayerController reference missing. Cannot control player input.", this);
-            }
-
-            if (_inputHandler != null)
-            {
-                if (paused)
+                Time.timeScale = 0f; // Stop game time
+                _inputHandler.EnableUIActions(); // Enable UI input actions
+                _inputHandler.DisablePlayerActions(); // Disable gameplay input actions
+                if (playerController != null) 
                 {
-                    _inputHandler.DisablePlayerActions(); // Disable player-specific input
-                    _inputHandler.EnableUIActions();    // Enable UI input (including Cancel)
+                    playerController.SetInputEnabled(false); // Ensure player input is disabled
                 }
                 else
                 {
-                    // When unpaused (in gameplay):
-                    _inputHandler.EnablePlayerActions(); // Enable player-specific input
-                    _inputHandler.EnableUIActions();    // <--- IMPORTANT CHANGE: Keep UI input (Cancel) enabled
+                    Debug.LogWarning("SetGamePaused: PlayerController is null. Cannot disable player input.");
                 }
+                Debug.Log($"Game Paused. Time.timeScale: {Time.timeScale}. Input: UI Enabled, Player Disabled.");
             }
             else
             {
-                Debug.LogWarning("MainMenuController: InputHandler instance not found. Cannot control input action maps.", this);
+                Time.timeScale = 1f; // Resume game time
+                _inputHandler.EnablePlayerActions(); // Enable gameplay input actions
+                _inputHandler.DisableUIActions(); // Disable UI input actions
+                if (playerController != null) 
+                {
+                    playerController.SetInputEnabled(true); // Ensure player input is enabled
+                }
+                else
+                {
+                    Debug.LogWarning("SetGamePaused: PlayerController is null. Cannot enable player input.");
+                }
+                Debug.Log($"Game Unpaused. Time.timeScale: {Time.timeScale}. Input: Player Enabled, UI Disabled.");
             }
         }
 
-        private void GenerateMazeAfterFade()
+        /// <summary>
+        /// Handles the sequence of generating a new maze and resuming the game after a UI fade-out.
+        /// </summary>
+        private void GenerateMazeAndResumeGame()
         {
-            HideAllPanels();
-            _rootElement.RemoveFromClassList("fade-out"); // Assumes CSS handles the fade effect
-            mazeGenerator.GenerateMazeAsync();
-            SetGamePaused(false); // Ensure game is unpaused and input maps are correctly set
+            Debug.Log("GenerateMazeAndResumeGame: Initiating maze generation and game resume.");
+            HideAllPanels(); // Ensure all panels are hidden
+            _rootElement.RemoveFromClassList("fade-out"); // Remove fade out class (important to do before generation)
+            
+            if (mazeGenerator != null) 
+            {
+                // Pass the current UI values to the MazeGenerator's generation method
+                mazeGenerator.GenerateMazeAsync(
+                    _widthField.value,
+                    _heightField.value,
+                    _seedField.value,
+                    _autoPlaceToggle.value,
+                    null, // CustomStart/End can be null for auto-place, or you could add UI for them
+                    null
+                );
+                Debug.Log($"GenerateMazeAndResumeGame: Called mazeGenerator.GenerateMazeAsync with W:{_widthField.value}, H:{_heightField.value}, Seed:{_seedField.value}, AutoPlace:{_autoPlaceToggle.value}");
+            }
+            else
+            {
+                Debug.LogError("GenerateMazeAndResumeGame: MazeGenerator is null. Cannot generate maze.");
+            }
+            SetGamePaused(false); // Unpause game and enable gameplay input
+            Debug.Log("GenerateMazeAndResumeGame: Game should now be unpaused and maze generation started.");
         }
 
+        /// <summary>
+        /// This method is called when the player reaches the exit tile.
+        /// It displays the exit menu and pauses the game.
+        /// </summary>
         private void HandlePlayerReachedExit()
         {
-            _rootElement.AddToClassList("fade-out"); // Trigger fade out
-            SetGamePaused(true); // Pause game and enable UI input
-            Invoke(nameof(ShowMenuAfterFadeAndRegen), 0.5f);
-        }
+            Debug.Log("HandlePlayerReachedExit: Player reached exit. Showing exit menu.");
+            // First, ensure the root UI is visible to allow showing the exit menu
+            _rootElement.style.display = DisplayStyle.Flex; 
+            ShowPanel(_exitMenuPanel); // Show the exit menu
+            SetGamePaused(true); // Pause the game and switch input maps
 
-        private void ShowMenuAfterFadeAndRegen()
-        {
-            _rootElement.RemoveFromClassList("fade-out"); // Remove fade out class
-            
-            // Always show the exit menu when the player reaches the exit
-            ShowPanel(_exitMenuPanel); 
+            Debug.Log("Player reached exit, showing exit menu.");
 
             // If the "Auto-Generate on Exit" toggle is true, simulate clicking the "New Maze" button
             // This will ensure the exit menu appears briefly, then automatically proceeds to generate a new maze.
             if (_exitAutoGenerateToggle.value)
             {
                 Debug.Log("Auto-generating new maze via exit menu toggle.");
-                OnExitNewMazeButtonClicked(); 
+                // Use Invoke to allow the UI to render the exit menu briefly before transitioning
+                // No, better to use StartCoroutine and WaitForSecondsRealtime for consistency
+                StartCoroutine(StartGameRoutine()); 
             }
-            // SetGamePaused(true) was already called in HandlePlayerReachedExit, maintaining the paused state and UI input
         }
-
-        // NEW: Helper methods for Color saving/loading and UI updates
+        
+        // Helper methods for Color saving/loading and UI updates
         private Color GetColorFromSliders(Slider r, Slider g, Slider b)
         {
             return new Color(r.value, g.value, b.value);
@@ -616,7 +709,10 @@ namespace UIMenu
 
         private void UpdateColorDisplay(Slider r, Slider g, Slider b, VisualElement display)
         {
-            display.style.backgroundColor = GetColorFromSliders(r, g, b);
+            if (display != null)
+            {
+                display.style.backgroundColor = GetColorFromSliders(r, g, b);
+            }
         }
 
         private void SaveColorToPlayerPrefs(string keyPrefix, Color color)
