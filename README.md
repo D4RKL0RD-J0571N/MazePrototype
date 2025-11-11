@@ -93,13 +93,6 @@ A global color-cycling system that synchronizes dynamic theming across objects.
 
 ---
 
-## 🧱 Build Notes
-
-- ✅ **Playable on PC** — full runtime maze generation & echo mechanic.  
-- ⚠️ **Android version unstable** — requires a dedicated input layer (touch/virtual joystick integration planned).  
-- 🌐 **WebGL / Itch.io build** — coming soon with runtime maze seeding support.  
-
----
 
 ## 📸 Showcase & Footage
 
@@ -121,6 +114,5 @@ Every mechanic is written to be **extendable**, **designer-friendly**, and **dat
 
 ## 🔗 Links
 
-- 🧭 **Itch.io:** [j0571n.itch.io/](https://j0571n.itch.io/) 
 - 🐙 **Source Code:** [Echo-Location Maze System (ELMS) / MazePrototype](https://github.com/D4RKL0RD-J0571N/MazePrototype)  
 - 📫 **Contact:** [LinkedIn](https://www.linkedin.com/in/jostin-lopez-b761261bb) [Email](jostinlopezsobalbarro@gmail.com)
