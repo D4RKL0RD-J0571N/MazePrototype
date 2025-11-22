@@ -99,8 +99,9 @@ A global color-cycling system that synchronizes dynamic theming across objects.
 The prototype features **real-time maze regeneration**, showcasing the system’s ability to rebuild the maze start and end dynamically each run.  
 Visuals use **simple shapes and colors** to focus on system design and clarity.  
 
-🎥 *Demo video & screenshots available*
+🎥 *Demo video & screenshots available* 
 
+[YouTube](https://youtu.be/9TGZjnqw-4M)
 ---
 
 ## ⚙️ Summary
